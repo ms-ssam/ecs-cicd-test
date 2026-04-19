@@ -1,9 +1,7 @@
 from flask import Flask, render_template
-from redis import Redis
-import os,random
+import random
 
 app = Flask(__name__)
-redis = Redis(host='redis', port=6379)
 
 images = [
     "cloud-01.png",
@@ -18,8 +16,7 @@ images = [
 @app.route('/')
 def index():
     image_path = "/static/images/" + random.choice(images)
-
-    count = redis.incr('count')
+    count = 1
     return render_template('index.html', image_path=image_path, visit_count=count)
 
 if __name__ == "__main__":
