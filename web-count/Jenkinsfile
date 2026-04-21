@@ -1,11 +1,71 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION   = 'ap-northeast-2'
+        ECR_REPO     = '520397877251.dkr.ecr.ap-northeast-2.amazonaws.com/ms-flask-app'
+        IMAGE_TAG    = 'latest'
+        CLUSTER_NAME = 'ms-cluster'
+        SERVICE_NAME = 'flask-app-service'
+    }
+
     stages {
-        stage('Test') {
+        stage('Checkout 확인') {
             steps {
-                echo 'Jenkins pipeline works!'
+                echo 'checkout success'
+                sh 'pwd'
                 sh 'ls -al'
+                sh 'ls -al web-count'
+            }
+        }
+
+        stage('환경 확인') {
+            steps {
+                sh 'git --version'
+                sh 'docker --version'
+                sh 'aws --version'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                dir('web-count') {
+                    sh '''
+                    docker buildx build \
+                      --platform linux/amd64 \
+                      --load \
+                      -t ${ECR_REPO}:${IMAGE_TAG} .
+                    '''
+                }
+            }
+        }
+
+        stage('ECR Login') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login --username AWS --password-stdin $(echo ${ECR_REPO} | cut -d'/' -f1)
+                '''
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh '''
+                docker push ${ECR_REPO}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Deploy to ECS') {
+            steps {
+                sh '''
+                aws ecs update-service \
+                  --cluster ${CLUSTER_NAME} \
+                  --service ${SERVICE_NAME} \
+                  --force-new-deployment \
+                  --region ${AWS_REGION}
+                '''
             }
         }
     }
