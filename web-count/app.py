@@ -16,7 +16,7 @@ images = [
 @app.route('/')
 def index():
     image_path = "/static/images/" + random.choice(images)
-    count = 1
+    count = 999
     return render_template('index.html', image_path=image_path, visit_count=count)
 
 if __name__ == "__main__":
